@@ -33,13 +33,13 @@ public class DBQueries {
     }
 
     // Users
-    public boolean insertEmps(Employees employees) {
+    public boolean insertEmployees(Employees employees) {
         ContentValues values = new ContentValues();
         values.put(DBConstants.EMP_NAME, employees.getEmpName());
         return database.insert(DBConstants.EMP_TABLE, null, values) > -1;
     }
 
-    public ArrayList<Employees> readEmps() {
+    public ArrayList<Employees> readEmployees() {
         ArrayList<Employees> list = new ArrayList<>();
         try {
             Cursor cursor;

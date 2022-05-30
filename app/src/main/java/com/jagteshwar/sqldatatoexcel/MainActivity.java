@@ -21,10 +21,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.ajts.androidmads.library.SQLiteToExcel;
 import com.jagteshwar.sqldatatoexcel.adapter.RecyclerViewAdapter;
 import com.jagteshwar.sqldatatoexcel.db.DBHelper;
 import com.jagteshwar.sqldatatoexcel.db.DBQueries;
+import com.jagteshwar.sqldatatoexcel.db.SQLiteToExcelConversion;
 import com.jagteshwar.sqldatatoexcel.model.Employees;
 import com.jagteshwar.sqldatatoexcel.util.Utils;
 
@@ -40,22 +40,17 @@ public class MainActivity extends AppCompatActivity {
     DBHelper dbHelper;
     DBQueries dbQueries;
     String directory_path = Environment.getExternalStorageDirectory().getPath() + "/Backup/";
-    SQLiteToExcel sqliteToExcel;
+    SQLiteToExcelConversion sqliteToExcel;
     String fileAndLocation = "///sdcard/backup/employees.xls";
     RecyclerView recyclerView;
+    String TAG = MainActivity.class.getName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
         initViews();
-
-        final File file = new File(directory_path);
-        if (!file.exists()) {
-            Log.v("File Created", String.valueOf(file.mkdirs()));
-        }
 
         btnSaveUser.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -64,8 +59,8 @@ public class MainActivity extends AppCompatActivity {
                     dbQueries.open();
 
                     Employees employees = new Employees(editEmp.getText().toString());
-                    dbQueries.insertEmps(employees);
-                    empList = dbQueries.readEmps();
+                    dbQueries.insertEmployees(employees);
+                    empList = dbQueries.readEmployees();
                     setAdapter();
                     dbQueries.close();
                     Utils.showSnackBar(view, "Successfully Inserted");
@@ -76,32 +71,15 @@ public class MainActivity extends AppCompatActivity {
         btnExport.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                            == PackageManager.PERMISSION_GRANTED) {
-                        // Export SQLite DB as EXCEL FILE
-                        sqliteToExcel = new SQLiteToExcel(getApplicationContext(), DBHelper.DB_NAME, directory_path);
-                        sqliteToExcel.exportAllTables("employees.xls", new SQLiteToExcel.ExportListener() {
-                            @Override
-                            public void onStart() {
-
-                            }
-
-                            @Override
-                            public void onCompleted(String filePath) {
-                                Utils.showSnackBar(view, "Successfully Exported " + filePath);
-                            }
-
-                            @Override
-                            public void onError(Exception e) {
-                                Utils.showSnackBar(view, e.getMessage());
-                            }
-                        });
-                    } else {
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                if (isWriteStoragePermissionGranted()) {
+                    final File file = new File(directory_path);
+                    if (!file.exists()) {
+                        Log.v("File Created", String.valueOf(file.mkdirs()));
                     }
-
+                    createExcel();
+                } else {
+                    Utils.showSnackBar(view, "Permission not granted");
+                }
 
             }
         });
@@ -120,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
                 File file = new File(fileAndLocation);
                 Uri xls_file = Uri.parse("file:/" + file);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    xls_file = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + ".provider", file);
+                    xls_file = FileProvider.getUriForFile(MainActivity.this, BuildConfig.APPLICATION_ID + ".provider", file);
                 }
 
                 if (file.exists()) {
@@ -132,8 +110,61 @@ public class MainActivity extends AppCompatActivity {
                 Log.v("MyTag", "SEND EMAIL FileUri=" + xls_file);
                 emailIntent.putExtra(Intent.EXTRA_STREAM, xls_file);
 
-                getApplicationContext().startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+                MainActivity.this.startActivity(Intent.createChooser(emailIntent, "Send mail..."));
                 Utils.showSnackBar(v, "File sent via mail");
+            }
+        });
+
+    }
+
+    public boolean isWriteStoragePermissionGranted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                Log.v(TAG, "Permission is granted21");
+                return true;
+            } else {
+
+                Log.v(TAG, "Permission is revoked2");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 2);
+                return false;
+            }
+        } else {
+            Log.v(TAG, "Permission is granted2");
+            return true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
+            createExcel();
+
+        }
+    }
+
+    public void createExcel() {
+        sqliteToExcel = new SQLiteToExcelConversion(this, DBHelper.DB_NAME, directory_path);
+        Log.v(TAG, directory_path);
+        sqliteToExcel.exportAllTables("employees.xls", new SQLiteToExcelConversion.ExportListener() {
+            @Override
+            public void onStart() {
+
+            }
+
+            @Override
+            public void onCompleted(String filePath) {
+                Toast.makeText(MainActivity.this, "Export successful", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Toast.makeText(MainActivity.this, "Export not successful", Toast.LENGTH_SHORT).show();
+
             }
         });
 
@@ -162,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
         empList = new ArrayList<>();
 
         dbQueries.open();
-        empList = dbQueries.readEmps();
+        empList = dbQueries.readEmployees();
         setAdapter();
         dbQueries.close();
     }

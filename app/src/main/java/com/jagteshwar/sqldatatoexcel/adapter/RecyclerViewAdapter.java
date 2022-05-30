@@ -30,7 +30,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerViewAdapter.RecyclerViewHolder holder, int position) {
-        holder.empName.setText(employees.get(position).getEmpName());
+        holder.empId.setText("EmpId: " + employees.get(position).getEmpId());
+        holder.empName.setText("EmpName: " + employees.get(position).getEmpName());
     }
 
     @Override
@@ -39,11 +40,12 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     }
 
     public static class RecyclerViewHolder extends RecyclerView.ViewHolder {
-            TextView empName;
+        TextView empName, empId;
 
         public RecyclerViewHolder(View view) {
             super(view);
             empName = (TextView) view.findViewById(R.id.empName);
+            empId = (TextView) view.findViewById(R.id.empId);
         }
     }
 }
